@@ -59,7 +59,7 @@ $planets-data: {
 }
 
 :regions > SituationData {
-    HighOrbitMaxAltitude *: $atmo-rescale-factor;
+    HighOrbitMaxAltitude *: $rescale-factor;
     LowOrbitMaxAltutude *: $atmo-rescale-factor;
     AtmosphereMaxAltutude *: $atmo-rescale-factor;
 }

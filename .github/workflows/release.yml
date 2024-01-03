@@ -1,0 +1,54 @@
+name: Upload release
+
+on:
+  release:
+    types: [ "published" ]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    permissions: write-all
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up folder structure
+        run: |
+          mkdir BepInEx
+          mkdir BepInEx/plugins
+          mkdir BepInEx/plugins/KerbolarUpscale
+          cp swinfo.json BepInEx/plugins/KerbolarUpscale/swinfo.json
+          cp LICENSE BepInEx/plugins/KerbolarUpscale/LICENSE
+          cp -r patches BepInEx/plugins/KerbolarUpscale
+
+      - name: Extract current version
+        id: get-version
+        run: |
+          version=$(jq -r '.version' swinfo.json)
+          echo "Version is $version"
+          echo "version=$version" >> $GITHUB_ENV
+          echo "artifact_name=KerbolarUpscale-$version.zip" >> $GITHUB_ENV
+          echo "upload_url=$(wget -qO- https://api.github.com/repos/$GITHUB_REPOSITORY/releases | jq '.[0].upload_url' | tr -d \")" >> $GITHUB_ENV
+
+      - name: Build release zip
+        uses: montudor/action-zip@v1
+        with:
+          args: zip -qq -r release.zip BepInEx
+
+      - name: Publish release
+        uses: shogo82148/actions-upload-release-asset@v1.7.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ env.upload_url }}
+          asset_path: release.zip
+          asset_name: ${{ env.artifact_name }}
+          asset_content_type: application/zip
+      
+      

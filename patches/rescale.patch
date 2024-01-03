@@ -1,0 +1,364 @@
+@use "builtin:list";
+@use "builtin:dictionary";
+@use "builtin:type-conversion";
+@use "builtin:math";
+
+@function rescale-to-atmo($rescale) {
+    @return log((16.0/9.0)+((2.0*$rescale)/9.0),2.0);
+}
+
+$rescale-factor: 2.5;
+/* $square_cube: pow($rescale-factor, 0.666666666666666666666); */
+$atmo-rescale-factor: rescale-to-atmo($rescale-factor);
+
+$planets-data: {
+    Bop: 65000.0,
+    Dres: 138000.0,
+    Duna: 320000.0,
+    Eeloo: 210000.0,
+    Eve: 700000.0,
+    Gilly: 13000.0,
+    Ike: 130000.0,
+    Jool: 6000000.0,
+    Kerbin: 600000.0,
+    Kerbol: 261600000.0,
+    Laythe: 500000.0,
+    Minmus: 60000.0,
+    Moho: 250000.0,
+    Mun: 200000.0,
+    Pol: 44000.0,
+    Tylo: 600000.0,
+    Vall: 300000.0
+};
+
+@function update-vector($vec, $radius) {
+    $mag: square-root(($vec[x]*$vec[x]) + ($vec[y]*$vec[y]) + ($vec[z]*$vec[z]));
+    $normalized: {
+        x: $vec[x]/$mag,
+        y: $vec[y]/$mag,
+        z: $vec[z]/$mag
+    };
+    $asl: {
+        x: $vec[x] - ($normalized[x]*$radius),
+        y: $vec[y] - ($normalized[y]*$radius),
+        z: $vec[z] - ($normalized[z]*$radius)
+    };
+    @return {
+        x: $asl[x] + ($normalized[x]*$radius*$rescale-factor),
+        y: $asl[y] + ($normalized[y]*$radius*$rescale-factor),
+        z: $asl[z] + ($normalized[z]*$radius*$rescale-factor)
+    };
+}
+
+:discoverables {
+    $planet-data: $planets-data[$$BodyName];
+    * > * {
+        Position: update-vector($value,$planet-data);
+        Radius *: $rescale-factor;
+    }
+}
+
+:regions > SituationData {
+    HighOrbitMaxAltitude *: $atmo-rescale-factor;
+    LowOrbitMaxAltutude *: $atmo-rescale-factor;
+    AtmosphereMaxAltutude *: $atmo-rescale-factor;
+}
+
+:galaxy #Default > * > OrbitProperties .semiMajorAxis {
+    semiMajorAxis: $value:to-real() * $rescale-factor;
+}
+
+@function ComputeObjectData($localSimObjects) {
+    @return $localSimObjects:map(
+        @function($object) {
+            @if ($object[RelativeTo] == "") {
+                @return {
+                    Name: $object[Name],
+                    RelativeTo: "",
+                    ReferenceFrame: $object[ReferenceFrame],
+                    LocalPosition: {
+                        x: $object[LocalPosition][x] * $rescale-factor,
+                        y: $object[LocalPosition][y] * $rescale-factor,
+                        z: $object[LocalPosition][z] * $rescale-factor
+                    },
+                    LocalRotation: $object[LocalRotation],
+                    FixedGuid: $object[FixedGuid]
+                };
+            } @else {
+                @return $object;
+            }
+        }
+    );
+}
+
+@function mult-time-by($factor:$atmo-rescale-factor) {
+    @return @function($curve-step) {
+        @return $curve-step:set(time,$curve-step[time] * $factor);
+    };
+}
+
+@mixin scale-curve-time($factor:$atmo-rescale-factor) {
+    * > fCurve {
+        m_Curve: $value:map(mult-time-by($factor));
+    }
+}
+:body {
+    radius: $value * $rescale-factor if $value != null else null;
+    atmosphereDepth: $value * $rescale-factor if $value != null else null;
+    inverseRotThresholdAltitude: $value * $rescale-factor if $value != null else null;
+    LocalSimObjectsData: ComputeObjectData($value) if $value != null else null;
+    * > atmospherePressureCurve {
+        @include scale-curve-time()
+    }
+    * > BodyAltitudeTemperatureCurve {
+        @include scale-curve-time()
+    }
+    * > BodyAltitudeSurfaceFluxCurve {
+        @include scale-curve-time()
+    }
+    * > BodyAltitudeRelativeHumidityCurve {
+        @include scale-curve-time()
+    }
+}
+
+
+$kerbin-atmosphere: {
+    radius: 600, /* km */
+    depth: 60, /* km */
+    minmax: {
+        min: 10, /* km */
+        max: 66.37167, /* km */
+    },
+};
+
+@new("kerbin")
+:atmosphere-override {
+    BottomRadius: $rescale-factor*$kerbin-atmosphere[radius];
+    AtmosphereHeight: $atmo-rescale-factor*$kerbin-atmosphere[depth];
+    AbsorptionHeightMinMax: {
+        x: $atmo-rescale-factor*$kerbin-atmosphere[minmax][min],
+        y: $atmo-rescale-factor*$kerbin-atmosphere[minmax][max],
+    };
+}
+
+$jool-atmosphere: {
+    radius: 6000, /* km */
+    depth: 200, /* km */
+    minmax: {
+        min: 10, /* km */
+        max: 40, /* km */
+    },
+};
+
+@new("jool")
+:atmosphere-override {
+    BottomRadius: $rescale-factor*$jool-atmosphere[radius];
+    AtmosphereHeight: $atmo-rescale-factor*$jool-atmosphere[depth];
+    AbsorptionHeightMinMax: {
+        x: $atmo-rescale-factor*$jool-atmosphere[minmax][min],
+        y: $atmo-rescale-factor*$jool-atmosphere[minmax][max],
+    };
+}
+
+$laythe-atmosphere: {
+    radius: 500, /* km */
+    depth: 30, /* km */
+    minmax: {
+        min: 10, /* km */
+        max: 40, /* km */
+    },
+};
+
+
+@new(laythe)
+:atmosphere-override {
+    BottomRadius: $rescale-factor*$laythe-atmosphere[radius];
+    AtmosphereHeight: $atmo-rescale-factor*$laythe-atmosphere[depth];
+    AbsorptionHeightMinMax: {
+        x: $atmo-rescale-factor*$laythe-atmosphere[minmax][min],
+        y: $atmo-rescale-factor*$laythe-atmosphere[minmax][max],
+    };
+}
+
+$eve-atmosphere: {
+    radius: 700,
+    depth: 82,
+    minmax: {
+        min: 0,
+        max: 80
+    }
+};
+
+@new(eve)
+:atmosphere-override {
+    BottomRadius: $rescale-factor*$eve-atmosphere[radius];
+    AtmosphereHeight: $atmo-rescale-factor*$eve-atmosphere[depth];
+    AbsorptionHeightMinMax: {
+        x: $atmo-rescale-factor*$eve-atmosphere[minmax][min],
+        y: $atmo-rescale-factor*$eve-atmosphere[minmax][max],
+    };
+}
+
+$duna-atmosphere: {
+    radius: 320,
+    depth: 22,
+    minmax: {
+        min: 0,
+        max: 19.69695
+    }
+};
+
+@new(duna)
+:atmosphere-override {
+    BottomRadius: $rescale-factor*$duna-atmosphere[radius];
+    AtmosphereHeight: $atmo-rescale-factor*$duna-atmosphere[depth];
+    AbsorptionHeightMinMax: {
+        x: $atmo-rescale-factor*$duna-atmosphere[minmax][min],
+        y: $atmo-rescale-factor*$duna-atmosphere[minmax][max],
+    };
+}
+
+$kerbin-clouds: {
+    planet-radius: 600000,
+    layers: {
+        "Fluffy Clouds": {
+            height: 7000,
+            minHeight: 7000,
+            maxHeight: 9500
+        },
+        "Wispy Clouds": {
+            height: 6668.317,
+            minHeight: 6668.317,
+            maxHeight: 7599.284
+        },
+        "Thick Cumulus Clouds": {
+            height: 6800,
+            minHeight: 6800,
+            maxHeight: 10766.9
+        }
+    }
+};
+
+@new(kerbin)
+:volume-cloud-override {
+    planetRadius: $kerbin-clouds[planet-radius] * $rescale-factor;
+    @each $key, $v in $kerbin-clouds[layers] {
+        +"#{$key}" {
+            bakedCloudHeight: $v[height] * $atmo-rescale-factor;
+            cloudHeightRange: {
+                x: $v[minHeight] * $atmo-rescale-factor,
+                y: $v[maxHeight] * $atmo-rescale-factor
+            };
+        }
+    }
+}
+
+$jool-clouds: {
+    planet-radius: 6000000,
+    layers: {
+        "Bottom": {
+            height: 10000,
+            minHeight: 0,
+            maxHeight: 20000
+        },
+        "Top": {
+            height: 20000,
+            minHeight: -10000,
+            maxHeight: 30000
+        },
+    }
+};
+
+@new(jool)
+:volume-cloud-override {
+    planetRadius: $jool-clouds[planet-radius] * $rescale-factor;
+    @each $key, $v in $jool-clouds[layers] {
+        +"#{$key}" {
+            bakedCloudHeight: $v[height] * $atmo-rescale-factor;
+            cloudHeightRange: {
+                x: $v[minHeight] * $atmo-rescale-factor,
+                y: $v[maxHeight] * $atmo-rescale-factor
+            };
+        }
+    }
+}
+
+$laythe-clouds: {
+    planet-radius: 500000,
+    layers: {
+        Cloud: {
+            height: 3000,
+            minHeight: 2500,
+            maxHeight: 3500
+        }
+    }
+};
+
+@new(laythe)
+:volume-cloud-override {
+    planetRadius: $laythe-clouds[planet-radius] * $rescale-factor;
+    @each $key, $v in $laythe-clouds[layers] {
+        +"#{$key}" {
+            bakedCloudHeight: $v[height] * $atmo-rescale-factor;
+            cloudHeightRange: {
+                x: $v[minHeight] * $atmo-rescale-factor,
+                y: $v[maxHeight] * $atmo-rescale-factor
+            };
+        }
+    }
+}
+
+$eve-clouds: {
+    planet-radius: 700000,
+    layers: {
+        "Wispy Cirrus Clouds": {
+            height: 11175,
+            minHeight: 5897.436,
+            maxHeight: 16454.58
+        },
+        "Thick Cumulus Clouds": {
+            height: 4200,
+            minHeight: 2600,
+            maxHeight: 5800
+        }
+    }
+};
+
+@new(eve)
+:volume-cloud-override {
+    planetRadius: $eve-clouds[planet-radius] * $rescale-factor;
+    @each $key, $v in $eve-clouds[layers] {
+        +"#{$key}" {
+            bakedCloudHeight: $v[height] * $atmo-rescale-factor;
+            cloudHeightRange: {
+                x: $v[minHeight] * $atmo-rescale-factor,
+                y: $v[maxHeight] * $atmo-rescale-factor
+            };
+        }
+    }
+}
+
+$duna-clouds: {
+    planet-radius: 320000,
+    layers: {
+        "Fluffy Clouds": {
+            height: 2257,
+            minHeight: 1810.811,
+            maxHeight: 2705.112
+        }
+    }
+};
+
+@new(duna)
+:volume-cloud-override {
+    planetRadius: $duna-clouds[planet-radius] * $rescale-factor;
+    @each $key, $v in $duna-clouds[layers] {
+        +"#{$key}" {
+            bakedCloudHeight: $v[height] * $atmo-rescale-factor;
+            cloudHeightRange: {
+                x: $v[minHeight] * $atmo-rescale-factor,
+                y: $v[maxHeight] * $atmo-rescale-factor
+            };
+        }
+    }
+}

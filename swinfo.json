@@ -1,0 +1,36 @@
+{
+    "spec": "2.0",
+    "mod_id": "KerbolarUpscale",
+    "author": "Cheese",
+    "name": "2.5x Kerbolar System",
+    "description": "This is a 2.5x rescale mod for KSP2",
+    "source": "https://github.com/cheese3660/2.5x-Kerbolar-System",
+    "version": "0.1.0",
+    "ksp2_version": {
+        "min": "0.2.0",
+        "max": "*"
+    },
+    "dependencies": [
+        {
+            "id": "com.github.x606.spacewarp",
+            "version": {
+                "min": "1.6.0",
+                "max": "*"
+            }
+        },
+        {
+            "id": "PatchManager",
+            "version": {
+                "min": "0.9.0",
+                "max": "*"
+            }
+        },
+        {
+            "id": "ShoeMaker",
+            "version": {
+                "min": "0.1.0",
+                "max": "*"
+            }
+        }
+    ]
+}

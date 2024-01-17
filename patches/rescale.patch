@@ -107,6 +107,7 @@ $planets-data: {
     atmosphereDepth: $value * $rescale-factor if $value != null else null;
     inverseRotThresholdAltitude: $value * $rescale-factor if $value != null else null;
     LocalSimObjectsData: ComputeObjectData($value) if $value != null else null;
+    StarLuminosity: $value * $rescale-factor * $rescale-factor if $value != null else null;
     * > atmospherePressureCurve {
         @include scale-curve-time()
     }

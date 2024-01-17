@@ -1,0 +1,4 @@
+$rescale-factor: 2.5;
+:parts > Module_DataTransmitter > Data_DataTransmitter {
+    CommunicationRange *: $rescale-factor;
+}

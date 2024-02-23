@@ -6,7 +6,7 @@
     "description": "This is a 2.5x rescale mod for KSP2",
     "source": "https://github.com/cheese3660/2.5x-Kerbolar-System",
     "version_check": "https://raw.githubusercontent.com/cheese3660/2.5x-Kerbolar-System/main/swinfo.json",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "ksp2_version": {
         "min": "0.2.0",
         "max": "*"

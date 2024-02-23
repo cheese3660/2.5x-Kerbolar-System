@@ -104,7 +104,7 @@ $planets-data: {
 }
 :body {
     radius: $value * $rescale-factor if $value != null else null;
-    atmosphereDepth: $value * $rescale-factor if $value != null else null;
+    atmosphereDepth: $value * $atmo-rescale-factor if $value != null else null;
     inverseRotThresholdAltitude: $value * $rescale-factor if $value != null else null;
     LocalSimObjectsData: ComputeObjectData($value) if $value != null else null;
     StarLuminosity: $value * $rescale-factor * $rescale-factor if $value != null else 0.0;

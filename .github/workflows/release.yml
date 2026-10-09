@@ -20,12 +20,11 @@ jobs:
 
       - name: Set up folder structure
         run: |
-          mkdir BepInEx
-          mkdir BepInEx/plugins
-          mkdir BepInEx/plugins/KerbolarUpscale
-          cp swinfo.json BepInEx/plugins/KerbolarUpscale/swinfo.json
-          cp LICENSE BepInEx/plugins/KerbolarUpscale/LICENSE
-          cp -r patches BepInEx/plugins/KerbolarUpscale
+          mkdir -p mods/KerbolarUpscale
+          cp swinfo.json mods/KerbolarUpscale/swinfo.json
+          cp LICENSE mods/KerbolarUpscale/LICENSE
+          cp KerbolarUpscale.lua mods/KerbolarUpscale/KerbolarUpscale.lua
+          cp -r localizations mods/KerbolarUpscale
 
       - name: Extract current version
         id: get-version
@@ -39,7 +38,7 @@ jobs:
       - name: Build release zip
         uses: montudor/action-zip@v1
         with:
-          args: zip -qq -r release.zip BepInEx
+          args: zip -qq -r release.zip mods
 
       - name: Publish release
         uses: shogo82148/actions-upload-release-asset@v1.7.2

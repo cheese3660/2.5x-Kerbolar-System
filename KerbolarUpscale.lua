@@ -159,23 +159,25 @@ end
 -- Kerbol and Jool have no discoverables, so those duplicates match nothing
 for bodyName in pairs(RADII) do
     local assetPrefix = string.lower(bodyName) .. "_science_regions"
-    PM.Planets:Duplicate(bodyName, bodyName .. "_" .. LAYER, rescaleBody)
-    PM.Science:DuplicateRegions(assetPrefix, "{name}_" .. LAYER, rescaleRegions)
-    PM.Science:DuplicateDiscoverables(assetPrefix .. "_discoverables", "{name}_" .. LAYER, rescaleDiscoverables)
+    PM.Planets:Duplicate(bodyName, bodyName .. "_" .. LAYER):Do(rescaleBody)
+    PM.Science:DuplicateRegions(assetPrefix, "{name}_" .. LAYER):Do(rescaleRegions)
+    PM.Science:DuplicateDiscoverables(assetPrefix .. "_discoverables", "{name}_" .. LAYER):Do(rescaleDiscoverables)
 end
 
 -- Antennas reach 2.5 times as far, so relays cover the wider orbits. Only parts with a transmitter are copied, and
 -- every other part keeps the campaign pack's copy.
 local ANTENNA_LAYER = "AntennaRescale"
 
-PM.Parts:Duplicate("*", "{name}_" .. ANTENNA_LAYER, function(part)
-    part.Layer = ANTENNA_LAYER
-    local transmitter = part.Module_DataTransmitter.Data_Transmitter
-    transmitter.CommunicationRange = transmitter.CommunicationRange * RESCALE
-end):Has("Module_DataTransmitter")
+PM.Parts:Duplicate("*", "{name}_" .. ANTENNA_LAYER)
+        :Has("Module_DataTransmitter")
+        :Do(function(part)
+            part.Layer = ANTENNA_LAYER
+            local transmitter = part.Module_DataTransmitter.Data_Transmitter
+            transmitter.CommunicationRange = transmitter.CommunicationRange * RESCALE
+        end)
 
 -- The galaxy, taken after Redux has added Drast and Beyl
-PM.Planets:DuplicateGalaxy("GalaxyDefinition_Default", GALAXY, function(galaxy)
+PM.Planets:DuplicateGalaxy("GalaxyDefinition_Default", GALAXY):Do(function(galaxy)
     galaxy.Name = LAYER
     galaxy.LocalizationKey = "Galaxies/" .. GALAXY
     galaxy.DescriptionLocalizationKey = "Galaxies/Description/" .. GALAXY
@@ -233,7 +235,7 @@ end
 
 -- Redux already tunes Kerbin's, Eve's and Jool's cloud layers, so the 2.5x layer copies those and lifts them
 for _, bodyName in ipairs({ "kerbin", "eve", "jool" }) do
-    PM.Planets:DuplicateCloudOverride("volume_cloud_override_" .. bodyName, "{name}_" .. LAYER, function(cloudOverride)
+    PM.Planets:DuplicateCloudOverride("volume_cloud_override_" .. bodyName, "{name}_" .. LAYER):Do(function(cloudOverride)
         cloudOverride.Layer = LAYER
         cloudOverride.planetRadius = CLOUD_PLANET_RADII[bodyName] * RESCALE
         for _, cloudLayer in pairs(cloudOverride.cumulusList) do

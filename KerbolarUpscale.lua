@@ -165,7 +165,7 @@ for bodyName in pairs(RADII) do
 end
 
 -- Antennas reach 2.5 times as far, so relays cover the wider orbits. Only parts with a transmitter are copied, and
--- every other part keeps the campaign pack's copy.
+-- every other part keeps its default copy.
 local ANTENNA_LAYER = "AntennaRescale"
 
 PM.Parts:Duplicate("*", "{name}_" .. ANTENNA_LAYER)
@@ -181,8 +181,6 @@ PM.Planets:DuplicateGalaxy("GalaxyDefinition_Default", GALAXY):Do(function(galax
     galaxy.Name = LAYER
     galaxy.LocalizationKey = "Galaxies/" .. GALAXY
     galaxy.DescriptionLocalizationKey = "Galaxies/Description/" .. GALAXY
-    galaxy.PartLayers = { ANTENNA_LAYER }
-
     for _, entry in ipairs(galaxy.CelestialBodies) do
         entry.Layer = LAYER
         local orbit = entry.OrbitProperties
@@ -271,8 +269,9 @@ for bodyName, cloudLayers in pairs(STOCK_CLOUDS) do
     end)
 end
 
--- The campaign pack: the rescaled galaxy with Redux's tech tree and missions
+-- The campaign pack: the rescaled galaxy with Redux's tech tree, missions and parts, and the rescaled antennas on top
 PM.CampaignPacks:CreateCampaignPack(LAYER, function(campaignPack)
     campaignPack.Galaxy = GALAXY
+    campaignPack.PartLayers = { "Default", ANTENNA_LAYER }
     campaignPack.CampaignPackDescriptionLocalizationKey = "CampaignPacks/Description/" .. LAYER
 end)

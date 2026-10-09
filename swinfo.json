@@ -6,7 +6,7 @@
     "description": "A 2.5x rescale of the Kerbolar System for KSP2 Redux, as its own galaxy and campaign pack",
     "source": "https://github.com/cheese3660/2.5x-Kerbolar-System",
     "version_check": "https://raw.githubusercontent.com/cheese3660/2.5x-Kerbolar-System/main/swinfo.json",
-    "version": "0.5.0",
+    "version": "0.5.1",
     "ksp2_version": {
         "min": "0.2.9.0",
         "max": "*"

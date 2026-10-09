@@ -63,10 +63,19 @@ local function scaleVector(vector, factor)
     vector.z = vector.z * factor
 end
 
+-- Moves a position from the body's center out with the surface, keeping its height above sea level
+local function moveOutWithSurface(position, oldRadius, newRadius)
+    local length = math.sqrt(position.x * position.x + position.y * position.y + position.z * position.z)
+    if length > 0 then
+        scaleVector(position, (length - oldRadius + newRadius) / length)
+    end
+end
+
 -- Bodies
 local function rescaleBody(body)
     body.Layer = LAYER
 
+    local oldRadius = body.radius
     if body.radius ~= nil then
         body.radius = body.radius * RESCALE
     end
@@ -77,6 +86,10 @@ local function rescaleBody(body)
     end
     if body.MaxTerrainHeight ~= nil then
         body.MaxTerrainHeight = body.MaxTerrainHeight * RESCALE
+    end
+    -- The terrain is built this far below sea level, so it scales with the terrain to keep the shorelines in place
+    if body.oceanAltitude ~= nil then
+        body.oceanAltitude = body.oceanAltitude * RESCALE
     end
     if body.atmosphereDepth ~= nil then
         body.atmosphereDepth = body.atmosphereDepth * ATMOSPHERE_RESCALE
@@ -91,11 +104,13 @@ local function rescaleBody(body)
         body.StarLuminosity = body.StarLuminosity * RESCALE * RESCALE
     end
 
-    -- Objects placed against the body itself, such as the space center, move out with its surface
-    if body.LocalSimObjectsData ~= nil then
+    -- Objects placed against the body itself, such as the space center, move out with its surface but keep their
+    -- height above sea level. The space center campus cannot grow, so scaling its whole position would lift it off
+    -- its pad by 1.5 times its altitude.
+    if body.LocalSimObjectsData ~= nil and oldRadius ~= nil then
         for _, simObject in ipairs(body.LocalSimObjectsData) do
             if simObject.RelativeTo == nil or simObject.RelativeTo == "" then
-                scaleVector(simObject.LocalPosition, RESCALE)
+                moveOutWithSurface(simObject.LocalPosition, oldRadius, body.radius)
             end
         end
     end

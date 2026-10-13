@@ -1,16 +1,16 @@
 -- 2.5x Kerbolar System
--- Redux's galaxy, Drast and Beyl included, at 2.5 times the size, as its own galaxy and campaign pack.
--- Every rescaled body, science region, discoverable set, atmosphere and cloud layer is a copy in the Kerbolar25x
--- layer, so the Redux and Classic galaxies are left exactly as they are.
+-- Redux's galaxy, Drast and Beyl included, at 2.5 times the size, as its own campaign pack.
+-- The Rescale feature patches Redux's bodies, science regions, discoverables, atmospheres and clouds in place, and the
+-- Antennas feature stretches transmitter ranges. Each campaign is patched for its own features, so campaigns without
+-- them keep Redux's galaxy exactly as it is.
 
-local LAYER = "Kerbolar25x"
-local GALAXY = "GalaxyDefinition_" .. LAYER
+local PACK = "Kerbolar25x"
 local RESCALE = 2.5
 -- Atmospheres thicken more slowly than the bodies grow
 local ATMOSPHERE_RESCALE = math.log((16.0 / 9.0) + ((2.0 * RESCALE) / 9.0)) / math.log(2.0)
 
 -- The bodies of Redux's galaxy and their original radii, which discoverables are placed against. Only these are
--- copied, so bodies other mods add to the galaxy keep their own data.
+-- rescaled, so bodies other mods add to the galaxy keep their own data.
 local RADII = {
     Beyl = 4595.0091452004035,
     Bop = 65000.0,
@@ -73,8 +73,6 @@ end
 
 -- Bodies
 local function rescaleBody(body)
-    body.Layer = LAYER
-
     local oldRadius = body.radius
     if body.radius ~= nil then
         body.radius = body.radius * RESCALE
@@ -122,8 +120,6 @@ end
 
 -- Science situations
 local function rescaleRegions(regions)
-    regions.Layer = LAYER
-
     local situations = regions.SituationData
     if situations == nil then
         return
@@ -136,8 +132,6 @@ end
 
 -- Discoverables keep their height above the surface as the surface moves out
 local function rescaleDiscoverables(discoverables)
-    discoverables.Layer = LAYER
-
     local radius = RADII[discoverables.BodyName]
     if radius == nil then
         return
@@ -156,40 +150,6 @@ local function rescaleDiscoverables(discoverables)
     end
 end
 
--- Kerbol and Jool have no discoverables, so those duplicates match nothing
-for bodyName in pairs(RADII) do
-    local assetPrefix = string.lower(bodyName) .. "_science_regions"
-    PM.Planets:Duplicate(bodyName, bodyName .. "_" .. LAYER):Do(rescaleBody)
-    PM.Science:DuplicateRegions(assetPrefix, "{name}_" .. LAYER):Do(rescaleRegions)
-    PM.Science:DuplicateDiscoverables(assetPrefix .. "_discoverables", "{name}_" .. LAYER):Do(rescaleDiscoverables)
-end
-
--- Antennas reach 2.5 times as far, so relays cover the wider orbits. Only parts with a transmitter are copied, and
--- every other part keeps its default copy.
-local ANTENNA_LAYER = "AntennaRescale"
-
-PM.Parts:Duplicate("*", "{name}_" .. ANTENNA_LAYER)
-        :Has("Module_DataTransmitter")
-        :Do(function(part)
-            part.Layer = ANTENNA_LAYER
-            local transmitter = part.Module_DataTransmitter.Data_Transmitter
-            transmitter.CommunicationRange = transmitter.CommunicationRange * RESCALE
-        end)
-
--- The galaxy, taken after Redux has added Drast and Beyl
-PM.Planets:DuplicateGalaxy("GalaxyDefinition_Default", GALAXY):Do(function(galaxy)
-    galaxy.Name = LAYER
-    galaxy.LocalizationKey = "Galaxies/" .. GALAXY
-    galaxy.DescriptionLocalizationKey = "Galaxies/Description/" .. GALAXY
-    for _, entry in ipairs(galaxy.CelestialBodies) do
-        entry.Layer = LAYER
-        local orbit = entry.OrbitProperties
-        if orbit ~= nil and orbit.semiMajorAxis ~= nil then
-            orbit.semiMajorAxis = orbit.semiMajorAxis * RESCALE
-        end
-    end
-end)
-
 -- Atmospheres, sized in kilometres
 local ATMOSPHERES = {
     kerbin = { radius = 600, depth = 60, absorptionMin = 10, absorptionMax = 66.37167 },
@@ -198,18 +158,6 @@ local ATMOSPHERES = {
     eve = { radius = 700, depth = 82, absorptionMin = 0, absorptionMax = 80 },
     duna = { radius = 320, depth = 22, absorptionMin = 0, absorptionMax = 19.69695 },
 }
-
-for bodyName, atmosphere in pairs(ATMOSPHERES) do
-    PM.Planets:CreateAtmosphereOverride(bodyName, function(atmosphereOverride)
-        atmosphereOverride.Layer = LAYER
-        atmosphereOverride.BottomRadius = atmosphere.radius * RESCALE
-        atmosphereOverride.AtmosphereHeight = atmosphere.depth * ATMOSPHERE_RESCALE
-        atmosphereOverride.AbsorptionHeightMinMax = {
-            x = atmosphere.absorptionMin * ATMOSPHERE_RESCALE,
-            y = atmosphere.absorptionMax * ATMOSPHERE_RESCALE,
-        }
-    end)
-end
 
 -- Cloud layers, sized in metres
 local CLOUD_PLANET_RADII = {
@@ -231,17 +179,6 @@ local function scaleCloudLayer(cloudLayer)
     end
 end
 
--- Redux already tunes Kerbin's, Eve's and Jool's cloud layers, so the 2.5x layer copies those and lifts them
-for _, bodyName in ipairs({ "kerbin", "eve", "jool" }) do
-    PM.Planets:DuplicateCloudOverride("volume_cloud_override_" .. bodyName, "{name}_" .. LAYER):Do(function(cloudOverride)
-        cloudOverride.Layer = LAYER
-        cloudOverride.planetRadius = CLOUD_PLANET_RADII[bodyName] * RESCALE
-        for _, cloudLayer in pairs(cloudOverride.cumulusList) do
-            scaleCloudLayer(cloudLayer)
-        end
-    end)
-end
-
 -- Laythe's and Duna's clouds are stock, so their stock layer heights are lifted
 local STOCK_CLOUDS = {
     laythe = {
@@ -252,26 +189,82 @@ local STOCK_CLOUDS = {
     },
 }
 
-for bodyName, cloudLayers in pairs(STOCK_CLOUDS) do
-    PM.Planets:CreateCloudOverride(bodyName, function(cloudOverride)
-        cloudOverride.Layer = LAYER
-        cloudOverride.planetRadius = CLOUD_PLANET_RADII[bodyName] * RESCALE
-        for layerName, cloudLayer in pairs(cloudLayers) do
-            cloudOverride.cumulusList:Append({
-                layerName = layerName,
-                bakedCloudHeight = cloudLayer.height * ATMOSPHERE_RESCALE,
-                cloudHeightRange = {
-                    x = cloudLayer.minHeight * ATMOSPHERE_RESCALE,
-                    y = cloudLayer.maxHeight * ATMOSPHERE_RESCALE,
-                },
-            })
+-- Late, so the rescale sees Redux's own additions, Drast, Beyl and Kerbin's discoverables among them
+PM:WithFeature("Rescale", function()
+    -- Kerbol and Jool have no discoverables, so those patches match nothing
+    for bodyName in pairs(RADII) do
+        local assetPrefix = string.lower(bodyName) .. "_science_regions"
+        PM.Planets:Patch("Rescale" .. bodyName):Late():Named(bodyName):Do(rescaleBody)
+        PM.Science:PatchRegions("Rescale" .. bodyName .. "Regions"):Late():Named(assetPrefix):Do(rescaleRegions)
+        PM.Science:PatchDiscoverables("Rescale" .. bodyName .. "Discoverables")
+            :Late()
+            :Named(assetPrefix .. "_discoverables")
+            :Do(rescaleDiscoverables)
+    end
+
+    PM.Planets:PatchDefaultGalaxy("RescaleOrbits"):Late():Do(function(galaxy)
+        for _, entry in ipairs(galaxy.CelestialBodies) do
+            local orbit = entry.OrbitProperties
+            if orbit ~= nil and orbit.semiMajorAxis ~= nil then
+                orbit.semiMajorAxis = orbit.semiMajorAxis * RESCALE
+            end
         end
     end)
-end
 
--- The campaign pack: the rescaled galaxy with Redux's tech tree, missions and parts, and the rescaled antennas on top
-PM.CampaignPacks:CreateCampaignPack(LAYER, function(campaignPack)
-    campaignPack.Galaxy = GALAXY
-    campaignPack.PartLayers = { "Default", ANTENNA_LAYER }
-    campaignPack.CampaignPackDescriptionLocalizationKey = "CampaignPacks/Description/" .. LAYER
+    for bodyName, atmosphere in pairs(ATMOSPHERES) do
+        PM.Planets:CreateAtmosphereOverride(bodyName, function(atmosphereOverride)
+            atmosphereOverride.BottomRadius = atmosphere.radius * RESCALE
+            atmosphereOverride.AtmosphereHeight = atmosphere.depth * ATMOSPHERE_RESCALE
+            atmosphereOverride.AbsorptionHeightMinMax = {
+                x = atmosphere.absorptionMin * ATMOSPHERE_RESCALE,
+                y = atmosphere.absorptionMax * ATMOSPHERE_RESCALE,
+            }
+        end)
+    end
+
+    -- Redux already tunes Kerbin's, Eve's and Jool's cloud layers, so those are lifted
+    for _, bodyName in ipairs({ "kerbin", "eve", "jool" }) do
+        PM.Planets:PatchCloudOverride("RescaleClouds" .. bodyName)
+            :Late()
+            :Named("volume_cloud_override_" .. bodyName)
+            :Do(function(cloudOverride)
+                cloudOverride.planetRadius = CLOUD_PLANET_RADII[bodyName] * RESCALE
+                for _, cloudLayer in pairs(cloudOverride.cumulusList) do
+                    scaleCloudLayer(cloudLayer)
+                end
+            end)
+    end
+
+    for bodyName, cloudLayers in pairs(STOCK_CLOUDS) do
+        PM.Planets:CreateCloudOverride(bodyName, function(cloudOverride)
+            cloudOverride.planetRadius = CLOUD_PLANET_RADII[bodyName] * RESCALE
+            for layerName, cloudLayer in pairs(cloudLayers) do
+                cloudOverride.cumulusList:Append({
+                    layerName = layerName,
+                    bakedCloudHeight = cloudLayer.height * ATMOSPHERE_RESCALE,
+                    cloudHeightRange = {
+                        x = cloudLayer.minHeight * ATMOSPHERE_RESCALE,
+                        y = cloudLayer.maxHeight * ATMOSPHERE_RESCALE,
+                    },
+                })
+            end
+        end)
+    end
+end)
+
+-- Antennas reach 2.5 times as far, so relays cover the wider orbits
+PM:WithFeature("Antennas", function()
+    PM.Parts:Patch("RescaleAntennas")
+        :Late()
+        :Has("Module_DataTransmitter")
+        :Do(function(part)
+            local transmitter = part.Module_DataTransmitter.Data_Transmitter
+            transmitter.CommunicationRange = transmitter.CommunicationRange * RESCALE
+        end)
+end)
+
+-- The campaign pack: Redux's whole game, with its galaxy rescaled and the antennas stretched to match
+PM.CampaignPacks:CreateCampaignPack(PACK, function(campaignPack)
+    campaignPack.Features = { "Ksp2Redux:All", "KerbolarUpscale:Rescale", "KerbolarUpscale:Antennas" }
+    campaignPack.CampaignPackDescriptionLocalizationKey = "CampaignPacks/Description/" .. PACK
 end)
